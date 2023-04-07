@@ -489,6 +489,13 @@ def load_and_cache_examples(args, task, preprocessor, split='train', language='e
     # dataset, and the others will use the cache
     if args.local_rank == 0 and not evaluate:
         torch.distributed.barrier()
+    
+    # if we want to train with a random percentage of train data:
+    if  args.few_shot_percentage > 0 and split == 'train':
+        logger.info("Original no. of examples = {}".format(len(features)))
+        features = random.sample(features, int(len(features)*args.few_shot_percentage))
+        logger.info('Using few-shot learning on {} percentage examples'.format(args.few_shot_percentage))
+        logger.info('Using few-shot learning on {} examples'.format(len(features)))
 
         # Convert to Tensors and build dataset
     all_input_ids = torch.tensor([f.input_ids for f in features], dtype=torch.long)
@@ -706,6 +713,8 @@ def main():
                         help='which retrieval method to use')
     parser.add_argument('--random_retrieval', action='store_true', help='whether to use random retrieval')
 
+    parser.add_argument("--few_shot_percentage", type=float, default=-1, help="percentage for few shot training")
+
     args = parser.parse_args()
 
     if (
@@ -889,7 +898,7 @@ def main():
     if args.do_predict and args.local_rank in [-1, 0]:
         tokenizer = tokenizer_class.from_pretrained(
             args.model_name_or_path if args.model_name_or_path else best_checkpoint, do_lower_case=args.do_lower_case)
-        model = model_class.from_pretrained(best_checkpoint if args.init_checkpoint else args.model_name_or_path)
+        model = model_class.from_pretrained(best_checkpoint)
         model.to(args.device)
         output_predict_file = os.path.join(args.output_dir, args.test_split + '_results.txt')
         total = total_correct = 0.0

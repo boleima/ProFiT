@@ -263,6 +263,13 @@ class XnliPVP(PVP):
 
         if self.pattern_id == 0:
             return [text_a, '.', self.mask, text_b], []
+            """
+        Issues in Data Synthesis .
+        ('Issues in Data Synthesis .', True)
+        Problems in data synthesis .
+        ('Problems in data synthesis .', True)
+        ('Issues in Data Synthesis .', True) . [MASK] ('Problems in data synthesis .', True)
+            """
         elif self.pattern_id == 1 or self.pattern_id == 2:
             return [text_a, '?'], [self.mask, ',', text_b]
         else:
@@ -273,8 +280,65 @@ class XnliPVP(PVP):
             return XnliPVP.VERBALIZER_A[label]
         return XnliPVP.VERBALIZER_B[label]
 
+# ['"', (['You have access to the facts .'], True), '" ?'] ['[MASK]', ', "', ('The facts are accessible to you .', True), '"']
 
+
+class PawsxPVP(PVP):
+    VERBALIZER_A = {
+        '0': ["Wrong"],
+        '1': ["Right"]
+    }
+    VERBALIZER_B = {
+        '0': ["No"],
+        '1': ["Yes"]
+    }
+
+    def get_parts(self, example: InputExample) -> FilledPattern:
+        text_a = self.shortenable(example.text_a)
+        text_b = self.shortenable(example.text_b)
+        
+        if self.pattern_id == 0:
+            return ['"', text_a, '" / "', text_b, ' Similar sense?', self.mask, '.'], []
+        if self.pattern_id == 1:
+            return ['Do sentence',text_a, "and sentence", text_b, ' have the same meaning?', self.mask, '.'], []
+        if self.pattern_id == 2:
+            return [text_a, text_b, "The previous two sentences are paraphrases. Right?", self.mask, '.'], []
+
+    def verbalize(self, label) -> List[str]:
+        if self.pattern_id == 2:
+            return PawsxPVP.VERBALIZER_A[label]
+        if self.pattern_id == 0 or self.pattern_id == 1:
+            return PawsxPVP.VERBALIZER_B[label]
+        
+
+class AmazonPVP(PVP):
+    VERBALIZER = {
+        "1": ["terrible"],
+        "2": ["bad"],
+        "3": ["ok"],
+        "4": ["good"],
+        "5": ["great"]
+    }
+
+    def get_parts(self, example: InputExample) -> FilledPattern:
+        text = self.shortenable(example.text_a)
+
+        if self.pattern_id == 0:
+            return ['It was', self.mask, '.', text], []
+        elif self.pattern_id == 1:
+            return [text, '. All in all, it was', self.mask, '.'], []
+        elif self.pattern_id == 2:
+            return ['Just', self.mask, "!"], [text]
+        elif self.pattern_id == 3:
+            return [text], ['In summary, the restaurant is', self.mask, '.']
+        else:
+            raise ValueError("No pattern implemented for id {}".format(self.pattern_id))
+
+    def verbalize(self, label) -> List[str]:
+        return AmazonPVP.VERBALIZER[label]
 
 PVPS = {
     'xnli': XnliPVP,
+    'pawsx': PawsxPVP,
+    "amazon": AmazonPVP
 }
