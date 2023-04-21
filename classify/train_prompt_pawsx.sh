@@ -10,6 +10,7 @@ PATTERN_ID=${5:-0}
 export CUDA_VISIBLE_DEVICES=$GPU
 
 TASK='pawsx'
+NUM_SAMPLE=256
 LR=2e-5
 EPOCH=5
 MAXL=128
@@ -28,15 +29,14 @@ if [ $MODEL == "xlm-mlm-100-1280" ] || [ $MODEL == "xlm-roberta-large" ]; then
   BATCH_SIZE=2
   GRAD_ACC=16
 else
-  BATCH_SIZE=8
-  GRAD_ACC=4
+  BATCH_SIZE=1
+  GRAD_ACC=1
 fi
+  #BATCH_SIZE=8
+  #GRAD_ACC=4
 
-# +
-#SAVE_DIR="$OUT_DIR/$TASK/${MODEL}-LR${LR}-epoch${EPOCH}-MaxLen${MAXL}-PatternID${PATTERN_ID}-{retrieval}/"
-#SAVE_DIR="$OUT_DIR/$TASK/${MODEL}-LR${LR}-epoch${EPOCH}-MaxLen${MAXL}-PatternID${PATTERN_ID}/"
-#SAVE_DIR="$OUT_DIR/$TASK/${MODEL}-LR${LR}-epoch${EPOCH}-MaxLen${MAXL}-PatternID${PATTERN_ID}-0.05/"
-SAVE_DIR="$OUT_DIR/$TASK/${MODEL}-LR${LR}-epoch${EPOCH}-MaxLen${MAXL}-PatternID${PATTERN_ID}/"
+
+SAVE_DIR="$OUT_DIR/$TASK/${MODEL}-LR${LR}-epoch${EPOCH}-MaxLen${MAXL}-PatternID${PATTERN_ID}-K${NUM_SAMPLE}/"
 
 mkdir -p $SAVE_DIR
 
@@ -56,7 +56,7 @@ python $PWD/profit/run_prompt_classify.py \
   --num_train_epochs $EPOCH \
   --max_seq_length $MAXL \
   --output_dir $SAVE_DIR/ \
-  --save_steps 200 \
+  --save_steps `expr 2 \* $NUM_SAMPLE`  \
   --eval_all_checkpoints \
   --log_file 'train' \
   --predict_languages $LANGS \
@@ -64,7 +64,7 @@ python $PWD/profit/run_prompt_classify.py \
   --overwrite_output_dir \
   --overwrite_cache \
   --pattern_id $PATTERN_ID \
-  #--few_shot_percentage 0.001
+
   
     #--init_checkpoint "$OUT_DIR/$TASK/${MODEL}-LR${LR}-epoch${EPOCH}-MaxLen${MAXL}-PatternID${PATTERN_ID}/checkpoint-best/"
   #

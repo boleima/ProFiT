@@ -22,6 +22,7 @@ OUT_DIR=${4:-"$REPO/outputs/"}
 export CUDA_VISIBLE_DEVICES=$GPU
 
 TASK='pawsx'
+NUM_SAMPLE=256
 LR=2e-5
 EPOCH=5
 MAXL=128
@@ -40,13 +41,15 @@ if [ $MODEL == "xlm-mlm-100-1280" ] || [ $MODEL == "xlm-roberta-large" ]; then
   BATCH_SIZE=2
   GRAD_ACC=16
 else
-  BATCH_SIZE=8
-  GRAD_ACC=4
+  BATCH_SIZE=1
+  GRAD_ACC=1
 fi
+  #BATCH_SIZE=8
+  #GRAD_ACC=4
 
-PERCENTAGE=0.2
+#PERCENTAGE=0.2
 
-SAVE_DIR="${OUT_DIR}/${TASK}/${MODEL}-LR${LR}-epoch${EPOCH}-MaxLen${MAXL}-${PERCENTAGE}/"
+SAVE_DIR="${OUT_DIR}/${TASK}/${MODEL}-LR${LR}-epoch${EPOCH}-MaxLen${MAXL}-K${NUM_SAMPLE}/"
 mkdir -p $SAVE_DIR
 
 # +
@@ -62,7 +65,7 @@ python $PWD/third_party/run_classify.py \
   --test_split test \
   --data_dir $DATA_DIR/$TASK/ \
   --gradient_accumulation_steps $GRAD_ACC \
-  --save_steps 200 \
+  --save_steps `expr 2 \* $NUM_SAMPLE` \
   --per_gpu_train_batch_size $BATCH_SIZE \
   --learning_rate $LR \
   --num_train_epochs $EPOCH \
@@ -74,6 +77,7 @@ python $PWD/third_party/run_classify.py \
   --log_file 'train.log' \
   --predict_languages $LANGS \
   --few_shot_percentage $PERCENTAGE \
+  --num_sample $NUM_SAMPLE \
   --save_only_best_checkpoint $LC 
 
 #--do_predict_dev \

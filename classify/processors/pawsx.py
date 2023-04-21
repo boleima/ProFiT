@@ -17,7 +17,8 @@
 
 import logging
 import os
-
+import random
+from collections import Counter
 from transformers import DataProcessor
 from processors.utils import InputExample
 
@@ -30,7 +31,7 @@ class PawsxProcessor(DataProcessor):
     def __init__(self):
         pass
 
-    def get_examples(self, data_dir, language='en', split='train'):
+    def get_examples(self, data_dir, language='en', split='train', num_sample=-1):
         """See base class."""
         examples = []
         for lg in language.split(','):
@@ -40,12 +41,37 @@ class PawsxProcessor(DataProcessor):
                 guid = "%s-%s-%s" % (split, lg, i)
                 text_a = line[0]
                 text_b = line[1]
-                if split == 'test' and len(line) != 3:
-                    label = "0"
-                else:
-                    label = str(line[2].strip())
+                # if split == 'test' and len(line) != 3:
+                #     label = "0"
+                # else:
+                label = str(line[2].strip())
                 assert isinstance(text_a, str) and isinstance(text_b, str) and isinstance(label, str)
                 examples.append(InputExample(guid=guid, text_a=text_a, text_b=text_b, label=label, language=lg))
+        # print the data distribution
+        labels= []
+        for example in examples:
+          labels.append(example.label)
+        labels_count=Counter(labels)
+        print(labels_count)
+        if num_sample != -1:
+            # examples = random.sample(examples, num_sample)
+            random.shuffle(examples)
+            l0, l1= [], []
+            labels = list(set([e.label for e in examples]))
+            for example in examples:
+                if example.label==labels[0] and len(l0)<num_sample:
+                    l0.append(example)
+                elif example.label==labels[1] and len(l1)<num_sample:
+                    l1.append(example)
+                elif len(l0)==num_sample and len(l1)==num_sample:
+                    break
+            examples = l0+l1
+            # print the data distribution
+            labels= []
+            for example in examples:
+                labels.append(example.label)
+            labels_count=Counter(labels)
+            print(labels_count)
         return examples
 
     def get_translate_examples(self, data_dir, language='en', split='train'):
@@ -68,9 +94,9 @@ class PawsxProcessor(DataProcessor):
                 examples.append(InputExample(guid=guid, text_a=text_a, text_b=text_b, label=label, language=language))
         return examples
 
-    def get_train_examples(self, data_dir, language='en'):
+    def get_train_examples(self, data_dir, language='en', num_sample=-1):
         """See base class."""
-        return self.get_examples(data_dir, language, split='train')
+        return self.get_examples(data_dir, language, split='train', num_sample=num_sample)
 
     def get_translate_train_examples(self, data_dir, language='en'):
         """See base class."""
@@ -80,13 +106,13 @@ class PawsxProcessor(DataProcessor):
         """See base class."""
         return self.get_translate_examples(data_dir, language, split='test')
 
-    def get_test_examples(self, data_dir, language='en'):
+    def get_test_examples(self, data_dir, language='en', num_sample=-1):
         """See base class."""
-        return self.get_examples(data_dir, language, split='test')
+        return self.get_examples(data_dir, language, split='test', num_sample=num_sample)
 
-    def get_dev_examples(self, data_dir, language='en'):
+    def get_dev_examples(self, data_dir, language='en', num_sample=-1):
         """See base class."""
-        return self.get_examples(data_dir, language, split='dev')
+        return self.get_examples(data_dir, language, split='dev', num_sample=num_sample)
 
     def get_labels(self):
         """See base class."""
