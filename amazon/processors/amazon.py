@@ -20,6 +20,7 @@ import logging
 import os
 import json
 import random
+from collections import Counter
 
 from transformers import DataProcessor
 from .utils import InputExample
@@ -31,7 +32,7 @@ class AmazonProcessor(DataProcessor):
     def __init__(self):
         pass
 
-    def get_examples(self, data_dir, language='en', split='train'):
+    def get_examples(self, data_dir, language='en', split='train', num_sample=-1):
       """See base class."""
       examples = []
       for lg in language.split(','):
@@ -49,18 +50,50 @@ class AmazonProcessor(DataProcessor):
 
           assert isinstance(text, str) and isinstance(label, str)
           examples.append(InputExample(guid=guid, text_a=text, label=label, language=lg))
+      # print the data distribution
+      labels= []
+      for example in examples:
+        labels.append(example.label)
+      labels_count=Counter(labels)
+      print(labels_count)
+      if num_sample != -1:
+            # examples = random.sample(examples, num_sample)
+            random.shuffle(examples)
+            l0, l1, l2, l3, l4 = [], [], [], [], []
+            labels = list(set([e.label for e in examples]))
+            for example in examples:
+                if example.label==labels[0] and len(l0)<num_sample:
+                    l0.append(example)
+                elif example.label==labels[1] and len(l1)<num_sample:
+                    l1.append(example)
+                elif example.label==labels[2] and len(l2)<num_sample:
+                    l2.append(example)
+                elif example.label==labels[3] and len(l3)<num_sample:
+                    l3.append(example)
+                elif example.label==labels[4] and len(l4)<num_sample:
+                    l4.append(example)
+                elif len(l0)==num_sample and len(l1)==num_sample and len(l2)==num_sample and len(l3)==num_sample and len(l4)==num_sample:
+                    break
+            examples = l0+l1+l2+l3+l4
+            random.shuffle(examples)
+            # print the data distribution
+            labels= []
+            for example in examples:
+                labels.append(example.label)
+            labels_count=Counter(labels)
+            print(labels_count)
       return examples
 
-    def get_train_examples(self, data_dir, language='en'):
-        examples=self.get_examples(data_dir, language, split='train')
+    def get_train_examples(self, data_dir, language='en', num_sample=-1):
+        examples=self.get_examples(data_dir, language, split='train', num_sample=num_sample)
         random.shuffle(examples)
         return examples
 
-    def get_dev_examples(self, data_dir, language='en'):
-        return self.get_examples(data_dir, language, split='dev')
+    def get_dev_examples(self, data_dir, language='en', num_sample=-1):
+        return self.get_examples(data_dir, language, split='dev', num_sample=num_sample)
 
-    def get_test_examples(self, data_dir, language='en'):
-        return self.get_examples(data_dir, language, split='test')
+    def get_test_examples(self, data_dir, language='en', num_sample=-1):
+        return self.get_examples(data_dir, language, split='test', num_sample=num_sample)
 
     def get_translate_train_examples(self, data_dir, language='en'):
         """See base class."""
@@ -98,6 +131,7 @@ class AmazonProcessor(DataProcessor):
         return examples
         
     def get_pseudo_test_examples(self, data_dir, language='en'):
+        lg = language
         file= open(os.path.join(data_dir, "XNLI-Translated/pseudo-test-set/en-{}-pseudo-translated.csv".format(language)))
         lines =[]
         for line in file.readlines():
@@ -114,7 +148,6 @@ class AmazonProcessor(DataProcessor):
 
     def get_labels(self):
         """See base class."""
-        #return ["contradiction", "entailment", "neutral"]
         return ["1","2","3","4","5"]
 
 amazon_processors = {

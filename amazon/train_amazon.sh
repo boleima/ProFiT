@@ -22,6 +22,7 @@ OUT_DIR=${4:-"$REPO/outputs/"}
 export CUDA_VISIBLE_DEVICES=$GPU
 
 TASK='amazon'
+NUM_SAMPLE=256
 LR=2e-5
 EPOCH=5
 MAXL=128
@@ -39,14 +40,14 @@ fi
 if [ $MODEL == "xlm-mlm-100-1280" ] || [ $MODEL == "xlm-roberta-large" ]; then
   BATCH_SIZE=2
   GRAD_ACC=16
-  LR=3e-5
 else
-  BATCH_SIZE=8
-  GRAD_ACC=4
-  LR=2e-5
+  BATCH_SIZE=1
+  GRAD_ACC=1
 fi
+  #BATCH_SIZE=8
+  #GRAD_ACC=4
 
-SAVE_DIR="$OUT_DIR/$TASK/${MODEL}-LR${LR}-epoch${EPOCH}-MaxLen${MAXL}/"
+SAVE_DIR="$OUT_DIR/$TASK/${MODEL}-LR${LR}-epoch${EPOCH}-MaxLen${MAXL}-K${NUM_SAMPLE}/"
 mkdir -p $SAVE_DIR
 
 # +
@@ -65,13 +66,17 @@ python $PWD/run_classify_amazon.py \
   --num_train_epochs $EPOCH \
   --max_seq_length $MAXL \
   --output_dir $SAVE_DIR/ \
-  --save_steps 1000 \
+  --save_steps `expr 5 \* $NUM_SAMPLE` \
   --eval_all_checkpoints \
   --log_file 'train' \
   --predict_languages $LANGS \
   --save_only_best_checkpoint \
-  --overwrite_output_dir $LC
-  #--model_name_or_path "$OUT_DIR/$TASK/${MODEL}-LR${LR}-epoch${EPOCH}-MaxLen${MAXL}/checkpoint-best" \
+  --overwrite_output_dir \
+  --overwrite_cache \
+  --num_sample $NUM_SAMPLE \
+
+
+#--model_name_or_path "$OUT_DIR/$TASK/${MODEL}-LR${LR}-epoch${EPOCH}-MaxLen${MAXL}/checkpoint-best" \
   #--init_checkpoint "$OUT_DIR/$TASK/${MODEL}-LR${LR}-epoch${EPOCH}-MaxLen${MAXL}/checkpoint-best" 
   
 

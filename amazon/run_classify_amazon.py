@@ -433,7 +433,7 @@ def load_and_cache_examples(args, task, tokenizer, mode, split='train', language
     logger.info("Creating features from dataset file at %s", args.data_dir)
     label_list = processor.get_labels()
     if split == 'train':
-      examples = processor.get_train_examples(args.data_dir, language)
+      examples = processor.get_train_examples(args.data_dir, language, args.num_sample)
     elif split == 'translate-train':
       examples = processor.get_translate_train_examples(args.data_dir, language)
     elif split == 'translate-test':
@@ -638,7 +638,8 @@ def main():
   parser.add_argument("--server_ip", type=str, default="", help="For distant debugging.")
   parser.add_argument("--server_port", type=str, default="", help="For distant debugging.")
   parser.add_argument("--few_shot_percentage", type=float, default=-1, help="percentage for few shot training")
-  
+  # few-shot training parameters
+  parser.add_argument('--num_sample', type=int, default=-1, help="Select the number of few-shot train samples")
   args = parser.parse_args()
 
   if (

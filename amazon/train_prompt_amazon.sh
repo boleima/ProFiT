@@ -10,6 +10,7 @@ PATTERN_ID=${5:-0}
 export CUDA_VISIBLE_DEVICES=$GPU
 
 TASK='amazon'
+NUM_SAMPLE=256
 LR=2e-5
 EPOCH=5
 MAXL=128
@@ -29,12 +30,15 @@ if [ $MODEL == "xlm-mlm-100-1280" ] || [ $MODEL == "xlm-roberta-large" ]; then
   GRAD_ACC=16
   LR=3e-5
 else
-  BATCH_SIZE=8
-  GRAD_ACC=4
+  BATCH_SIZE=1
+  GRAD_ACC=1
   LR=2e-5
 fi
 
-SAVE_DIR="$OUT_DIR/$TASK/${MODEL}-LR${LR}-epoch${EPOCH}-MaxLen${MAXL}-PatternID${PATTERN_ID}/"
+  #BATCH_SIZE=8
+  #GRAD_ACC=4
+
+SAVE_DIR="$OUT_DIR/$TASK/${MODEL}-LR${LR}-epoch${EPOCH}-MaxLen${MAXL}-PatternID${PATTERN_ID}-K${NUM_SAMPLE}/"
 mkdir -p $SAVE_DIR
 
 python $PWD/run_prompt_classify_amazon.py \
@@ -61,3 +65,4 @@ python $PWD/run_prompt_classify_amazon.py \
   --overwrite_cache \
   --pattern_id $PATTERN_ID \
   --num_priming 1 \
+  --num_sample $NUM_SAMPLE \
