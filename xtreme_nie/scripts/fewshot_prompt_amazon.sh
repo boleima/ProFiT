@@ -3,17 +3,17 @@
 REPO=$PWD
 GPU=${1:-1,2,3,4,5,6,7,0}
 MODEL=${2:-bert-base-multilingual-cased}
-DATA_DIR=${3:-"$REPO/download/"}
+DATA_DIR=${3:-"amazon_reviews_multi"}
 OUT_DIR=${4:-"$REPO/outputs/"}
 PATTERN_ID=${5:-1}
 MODEL_TYPE=${6:-bert}
 
 export CUDA_VISIBLE_DEVICES=$GPU
 
-TASK='pawsx'
+TASK='amazon'
 EPOCH=50
 MAXL=128
-LANGS="de,en,es,fr,ja,ko,zh"
+LANGS="de,en,es,fr,ja,zh"
 LC=""
 NUM_SAMPLES=(1 2 4 8 16 32 64 128 256 512 1024)
 
@@ -38,7 +38,7 @@ runfewshot(){
     --task_name $TASK \
     --do_train \
     --do_predict \
-    --data_dir $DATA_DIR/${TASK} \
+    --data_dir $DATA_DIR \
     --gradient_accumulation_steps $GRAD_ACC \
     --per_gpu_train_batch_size $BATCH_SIZE \
     --learning_rate $LR \

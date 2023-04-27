@@ -9,10 +9,9 @@ OUT_DIR=${4:-"$REPO/outputs/"}
 export CUDA_VISIBLE_DEVICES=$GPU
 
 TASK='xnli'
-LR=2e-5
-EPOCH=5
+EPOCH=50
 MAXL=128
-NUM_SAMPLE=256
+NUM_SAMPLES=(1 2 4 8 16 32 64 128 256 512 1024)
 LANGS="ar,bg,de,el,en,es,fr,hi,ru,sw,th,tr,ur,vi,zh"
 LC=""
 if [ $MODEL == "bert-base-multilingual-cased" ]; then
@@ -31,32 +30,45 @@ if [ $MODEL == "xlm-mlm-100-1280" ] || [ $MODEL == "xlm-roberta-large" ]; then
 else
   BATCH_SIZE=1
   GRAD_ACC=1
-  LR=2e-5
+  LR=1e-5
 fi
 
-# SAVE_DIR="$OUT_DIR/$TASK/${MODEL}-LR${LR}-epoch${EPOCH}-MaxLen${MAXL}/"
-SAVE_DIR="${OUT_DIR}/${TASK}/test_results_baseline-${NUM_SAMPLE}shot/"
-mkdir -p $SAVE_DIR
 
-python $PWD/run_baseline/run_classify.py \
-  --model_type $MODEL_TYPE \
-  --model_name_or_path $MODEL \
-  --train_language en \
-  --task_name $TASK \
-  --do_train \
-  --do_predict \
-  --data_dir $DATA_DIR/${TASK} \
-  --gradient_accumulation_steps $GRAD_ACC \
-  --per_gpu_train_batch_size $BATCH_SIZE \
-  --learning_rate $LR \
-  --num_train_epochs $EPOCH \
-  --max_seq_length $MAXL \
-  --output_dir $SAVE_DIR/ \
-  --save_steps 1000 \
-  --eval_all_checkpoints \
-  --log_file 'train' \
-  --predict_languages $LANGS \
-  --save_only_best_checkpoint \
-  --overwrite_output_dir \
-  --eval_test_set $LC \
-  --num_sample $NUM_SAMPLE
+runfewshot(){
+  # SAVE_DIR="$OUT_DIR/$TASK/${MODEL}-LR${LR}-epoch${EPOCH}-MaxLen${MAXL}/"
+  NAME="test_results_baseline-epoch${EPOCH}-${NUM_SAMPLE}shot"
+  SAVE_DIR="${OUT_DIR}/${TASK}/${NAME}/"
+  RESULT_FILE="results_${TASK}_bl.csv"
+  mkdir -p $SAVE_DIR
+
+  python $PWD/run_baseline/run_classify.py \
+    --model_type $MODEL_TYPE \
+    --model_name_or_path $MODEL \
+    --train_language en \
+    --task_name $TASK \
+    --do_train \
+    --do_predict \
+    --data_dir $DATA_DIR/${TASK} \
+    --gradient_accumulation_steps $GRAD_ACC \
+    --per_gpu_train_batch_size $BATCH_SIZE \
+    --learning_rate $LR \
+    --num_train_epochs $EPOCH \
+    --max_seq_length $MAXL \
+    --output_dir $SAVE_DIR/ \
+    --log_file 'train' \
+    --predict_languages $LANGS \
+    --save_only_best_checkpoint \
+    --overwrite_output_dir \
+    --overwrite_cache \
+    --eval_test_set $LC \
+    --num_sample ${1} \
+    --early_stopping
+  python $PWD/results_to_csv.py \
+    --input_path "${SAVE_DIR}test_results.txt" \
+    --save_path $RESULT_FILE \
+    --name $NAME
+}  
+for NUM_SAMPLE in "${NUM_SAMPLES[@]}"
+do
+  runfewshot $NUM_SAMPLE
+done

@@ -49,6 +49,7 @@ from transformers import (
 
 from processors.xnli import XnliProcessor
 from processors.pawsx import PawsxProcessor
+from processors.amazon import AmazonProcessor
 from preprocessor import MLMPreprocessor
 from processors.retrieve import add_priming_data
 
@@ -78,6 +79,7 @@ MODEL_CLASSES = {
 PROCESSORS = {
     'xnli': XnliProcessor,
     'pawsx': PawsxProcessor,
+    'amazon': AmazonProcessor
 }
 
 
@@ -184,9 +186,11 @@ def train(args, train_dataset, model, tokenizer, preprocessor, label_list, lang2
             logger.info("  Will skip the first %d steps in the first epoch", steps_trained_in_current_epoch)
 
     best_score = 0
+    previous_score = 0
     best_checkpoint = None
     tr_loss, logging_loss = 0.0, 0.0
     model.zero_grad()
+    num_worse_epoch = 0
     train_iterator = trange(
         epochs_trained, int(args.num_train_epochs), desc="Epoch", disable=args.local_rank not in [-1, 0]
     )
@@ -287,6 +291,13 @@ def train(args, train_dataset, model, tokenizer, preprocessor, label_list, lang2
                             torch.save(optimizer.state_dict(), os.path.join(output_dir, "optimizer.pt"))
                             torch.save(scheduler.state_dict(), os.path.join(output_dir, "scheduler.pt"))
                             logger.info("Saving optimizer and scheduler states to %s", output_dir)
+                    if args.early_stopping:
+                        if avg_acc > previous_score:
+                            num_worse_epoch = 0
+                        else:
+                            num_worse_epoch += 1
+                        previous_score = avg_acc
+
                     else:
                         # Save model checkpoint
                         output_dir = os.path.join(args.output_dir, "checkpoint-{}".format(global_step))
@@ -305,10 +316,10 @@ def train(args, train_dataset, model, tokenizer, preprocessor, label_list, lang2
                         torch.save(scheduler.state_dict(), os.path.join(output_dir, "scheduler.pt"))
                         logger.info("Saving optimizer and scheduler states to %s", output_dir)
 
-            if args.max_steps > 0 and global_step > args.max_steps:
+            if (args.max_steps > 0 and global_step > args.max_steps) or (args.early_stopping and num_worse_epoch==args.tolerance):
                 epoch_iterator.close()
                 break
-        if args.max_steps > 0 and global_step > args.max_steps:
+        if (args.max_steps > 0 and global_step > args.max_steps) or (args.early_stopping and num_worse_epoch==args.tolerance):
             train_iterator.close()
             break
 
@@ -443,17 +454,31 @@ def load_and_cache_examples(args, task, preprocessor, split='train', language='e
     output_mode = "classification"
     # Load data features from cache or dataset file
     lc = '_lc' if args.do_lower_case else ''
-    cached_features_file = os.path.join(
-        args.data_dir,
-        "cached_{}_{}_{}_{}_{}{}".format(
-            split,
-            list(filter(None, args.model_name_or_path.split("/"))).pop(),
-            str(args.max_seq_length),
-            str(task),
-            str(language),
-            lc,
-        ),
-    )
+    if os.path.exists(args.data_dir):
+        cached_features_file = os.path.join(
+            args.data_dir,
+            "cached_{}_{}_{}_{}_{}{}".format(
+                split,
+                list(filter(None, args.model_name_or_path.split("/"))).pop(),
+                str(args.max_seq_length),
+                str(task),
+                str(language),
+                lc,
+            ),
+        )
+    else:
+        cached_features_file = os.path.join(
+            'download',
+            args.data_dir,
+            "cached_{}_{}_{}_{}_{}{}".format(
+                split,
+                list(filter(None, args.model_name_or_path.split("/"))).pop(),
+                str(args.max_seq_length),
+                str(task),
+                str(language),
+                lc,
+            ),
+        )
     if os.path.exists(cached_features_file) and not args.overwrite_cache:
         logger.info("Loading features from cached file %s", cached_features_file)
         features = torch.load(cached_features_file)
@@ -686,6 +711,9 @@ def main():
         help="For fp16: Apex AMP optimization level selected in ['O0', 'O1', 'O2', and 'O3']."
              "See details at https://nvidia.github.io/apex/amp.html",
     )
+    parser.add_argument("--early_stopping", action="store_true", 
+        help="whether to take early stopping strategy, if dev performance doesn't improve within 3 continuous epochs, then break the training" )
+    parser.add_argument("--tolerance", type=str, default=3, help="the maximum number of continuous decreasing epochs")
     parser.add_argument(
         "--save_only_best_checkpoint", action="store_true", help="save only the best checkpoint"
     )
@@ -775,6 +803,10 @@ def main():
     args.output_mode = "classification"
     label_list = processor.get_labels()
     num_labels = len(label_list)
+
+    # set save steps to make the save strategy "epoch"
+    if args.num_sample != -1:
+        args.save_steps = (args.num_sample * num_labels) / (args.n_gpu * args.per_gpu_train_batch_size * args.gradient_accumulation_steps)
 
     # Load pretrained model and tokenizer
     # Make sure only the first process in distributed training loads model & vocab

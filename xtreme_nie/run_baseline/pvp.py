@@ -318,12 +318,40 @@ class PawsxPVP(PVP):
         if self.pattern_id == 0 or 1:
             return PawsxPVP.VERBALIZER_A[label]
         return PawsxPVP.VERBALIZER_B[label]
+
+class AmazonPVP(PVP):
+    VERBALIZER = {
+        1: ["terrible"],
+        2: ["bad"],
+        3: ["ok"],
+        4: ["good"],
+        5: ["great"]
+    }
+
+    def get_parts(self, example: InputExample) -> FilledPattern:
+        text = self.shortenable(example.text_a)
         
+        # pattern 0: It was [mask]. TEXT
+        if self.pattern_id == 0:
+            return ['It was', self.mask, '.', text], []
+        # pattern 1: TEXT. All in all, it was [mask].
+        elif self.pattern_id == 1:
+            return [text, '. All in all, it was', self.mask, '.'], []
+        # pattern 2: Just [mask]! TEXT
+        elif self.pattern_id == 2:
+            return ['Just', self.mask, "!"], [text]
+        # pattern 3: TEXT. In summary, the product is [mask].
+        elif self.pattern_id == 3:
+            return [text], ['In summary, the product is', self.mask, '.']
+        else:
+            raise ValueError("No pattern implemented for id {}".format(self.pattern_id))
 
-
-
+    def verbalize(self, label) -> List[str]:
+        return AmazonPVP.VERBALIZER[label]
+        
 
 PVPS = {
     'xnli': XnliPVP,
-    'pawsx': PawsxPVP
+    'pawsx': PawsxPVP,
+    'amazon': AmazonPVP
 }
