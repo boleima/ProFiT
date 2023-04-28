@@ -260,14 +260,11 @@ def train(args, train_dataset, model, tokenizer, preprocessor, label_list, lang2
                         total = total_correct = 0.0
                         with open(output_predict_file, 'a') as writer:
                             writer.write('\n======= Predict using the model from checkpoint-{}:\n'.format(global_step))
-                            for language in args.predict_languages.split(','):
-                                result = evaluate(args, model, preprocessor, split=args.dev_split, language=language,
-                                                  lang2id=lang2id, prefix='checkpoint-' + str(global_step))
-                                writer.write('{}={}\n'.format(language, result['acc']))
-                                total += result['num']
-                                total_correct += result['correct']
-                                avg_acc = total_correct / total
-                            writer.write('total={}\n'.format(avg_acc))
+                            result = evaluate(args, model, preprocessor, split=args.dev_split, language=agrs.train_language,
+                                                lang2id=lang2id, prefix='checkpoint-' + str(global_step))
+                            avg_acc = result['acc']
+                            writer.write('{}={}\n'.format(language, result['acc']))
+
    
                     if args.save_only_best_checkpoint:
                         logger.info(" Dev accuracy of all languages = {}".format(avg_acc))
