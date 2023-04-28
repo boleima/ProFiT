@@ -260,7 +260,7 @@ def train(args, train_dataset, model, tokenizer, preprocessor, label_list, lang2
                         total = total_correct = 0.0
                         with open(output_predict_file, 'a') as writer:
                             writer.write('\n======= Predict using the model from checkpoint-{}:\n'.format(global_step))
-                            result = evaluate(args, model, preprocessor, split=args.dev_split, language=agrs.train_language,
+                            result = evaluate(args, model, preprocessor, split=args.dev_split, language=args.train_language,
                                                 lang2id=lang2id, prefix='checkpoint-' + str(global_step))
                             avg_acc = result['acc']
                             writer.write('{}={}\n'.format(language, result['acc']))
