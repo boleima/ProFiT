@@ -258,10 +258,10 @@ def train(args, train_dataset, model, tokenizer, lang2id=None):
                             result = evaluate(args, model, tokenizer, split=args.dev_split, language=args.train_language,
                                                 lang2id=lang2id, prefix='checkpoint-' + str(global_step))
                             avg_acc = result['acc']
-                            writer.write('{}={}\n'.format(language, result['acc']))
+                            writer.write('{}={}\n'.format(args.train_language, result['acc']))
 
                     if args.save_only_best_checkpoint:
-                        logger.info(" Dev accuracy on all languages = {}".format(avg_acc))
+                        logger.info(" Dev accuracy on train language = {}".format(avg_acc))
                         if avg_acc > best_score:
                             logger.info(" average acc.={} > best_score={}".format(avg_acc, best_score))
                             output_dir = os.path.join(args.output_dir, "checkpoint-best")
