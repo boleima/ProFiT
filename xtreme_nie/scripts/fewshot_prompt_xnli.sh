@@ -16,6 +16,14 @@ MAXL=128
 LANGS="ar,bg,de,el,en,es,fr,hi,ru,sw,th,tr,ur,vi,zh"
 LC=""
 NUM_SAMPLES=(1 2 4 8 16 32 64 128 256 512 1024)
+if [ $MODEL == "bert-base-multilingual-cased" ]; then
+  MODEL_TYPE="bert"
+elif [ $MODEL == "xlm-mlm-100-1280" ] || [ $MODEL == "xlm-mlm-tlm-xnli15-1024" ]; then
+  MODEL_TYPE="xlm"
+  LC=" --do_lower_case"
+elif [ $MODEL == "xlm-roberta-large" ] || [ $MODEL == "xlm-roberta-base" ]; then
+  MODEL_TYPE="xlmr"
+fi
 
 if [ $MODEL == "xlm-mlm-100-1280" ] || [ $MODEL == "xlm-roberta-large" ]; then
   BATCH_SIZE=2
