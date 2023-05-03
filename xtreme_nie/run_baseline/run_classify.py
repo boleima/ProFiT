@@ -779,6 +779,9 @@ def main():
         else:
             train_dataset = load_and_cache_examples(args, args.task_name, tokenizer, split=args.dev_split,
                                                     language=args.train_language, lang2id=lang2id, evaluate=False)
+        if args.num_sample == -1:
+            args.save_steps = len(train_dataset) // (args.n_gpu * args.per_gpu_train_batch_size * args.gradient_accumulation_steps) + 1
+
         global_step, tr_loss, best_score, best_checkpoint = train(args, train_dataset, model, tokenizer, lang2id)
         logger.info(" global_step = %s, average loss = %s", global_step, tr_loss)
         logger.info(" best checkpoint = {}, best score = {}".format(best_checkpoint, best_score))

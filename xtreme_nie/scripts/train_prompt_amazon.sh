@@ -3,34 +3,34 @@
 REPO=$PWD
 GPU=${1:-1,2,3,4,5,6,7,0}
 MODEL=${2:-bert-base-multilingual-cased}
-DATA_DIR=${3:-"$REPO/download/"}
+DATA_DIR=${3:-"amazon_reviews_multi"}
 OUT_DIR=${4:-"$REPO/outputs/"}
 PATTERN_ID=${5:-1}
 MODEL_TYPE=${6:-bert}
 
 export CUDA_VISIBLE_DEVICES=$GPU
 
-TASK='xnli'
-EPOCH=50
+TASK='amazon'
+EPOCH=5
 MAXL=128
-LANGS="ar,bg,de,el,en,es,fr,hi,ru,sw,th,tr,ur,vi,zh"
+LANGS="de,en,es,fr,ja,zh"
 LC=""
-NUM_SAMPLES=(1 2 4 8 16 32 64 128 256 512 1024)
+SEEDS=(10 42 421 520 1218)
 
 if [ $MODEL == "xlm-mlm-100-1280" ] || [ $MODEL == "xlm-roberta-large" ]; then
   BATCH_SIZE=2
   GRAD_ACC=16
   LR=3e-5
 else
-  BATCH_SIZE=1
-  GRAD_ACC=1
+  BATCH_SIZE=8
+  GRAD_ACC=4
   LR=1e-5
 fi
 
 runfewshot(){
-  NAME="${MODEL}-LR${LR}-epoch${EPOCH}-MaxLen${MAXL}-Pattern${PATTERN_ID}-${NUM_SAMPLE}shot"
-  SAVE_DIR="$OUT_DIR/$TASK/$PATTERN_ID/${MODEL}-LR${LR}-epoch${EPOCH}-MaxLen${MAXL}-Pattern${PATTERN_ID}-${NUM_SAMPLE}shot/"
-  RESULT_FILE="results_${TASK}.csv"
+  NAME="${MODEL}-LR${LR}-epoch${EPOCH}-MaxLen${MAXL}-Pattern${PATTERN_ID}-seed${1}"
+  SAVE_DIR="$OUT_DIR/$TASK/$PATTERN_ID/${NAME}/"
+  RESULT_FILE="results_${TASK}_full.csv"
   mkdir -p $SAVE_DIR
   python $PWD/run_baseline/run_prompt_classify.py \
     --model_type $MODEL_TYPE \
@@ -38,7 +38,7 @@ runfewshot(){
     --task_name $TASK \
     --do_train \
     --do_predict \
-    --data_dir $DATA_DIR/${TASK} \
+    --data_dir $DATA_DIR \
     --gradient_accumulation_steps $GRAD_ACC \
     --per_gpu_train_batch_size $BATCH_SIZE \
     --learning_rate $LR \
@@ -52,18 +52,16 @@ runfewshot(){
     --overwrite_cache \
     --eval_test_set $LC \
     --pattern_id $PATTERN_ID \
-    --num_sample ${1} \
+    --seed ${1}\
     --early_stopping
   #  --init_checkpoint outputs/xnli/bert-base-multilingual-cased-LR2e-5-epoch5-MaxLen128-PatternID1/checkpoint-best/
-	
   python $PWD/results_to_csv.py \
     --input_path "${SAVE_DIR}test_results.txt" \
     --save_path $RESULT_FILE \
     --name $NAME
 }
 
-for NUM_SAMPLE in "${NUM_SAMPLES[@]}"
+for SEED in "${SEEDS[@]}"
 do
-
-  runfewshot $NUM_SAMPLE
+  runfewshot $SEED
 done
